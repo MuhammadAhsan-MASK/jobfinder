@@ -2,59 +2,36 @@
 include('db.php');
 
 // Check if job seeker is logged in
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: jobseeker_login.php');
     exit();
 }
 
-// Initialize the jobs array
-$jobs = [];
+// Fetch jobs from DB
+$stmt = $pdo->query("SELECT * FROM jobs ORDER BY created_at DESC LIMIT 5");
+$jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Handle the search query
-if (isset($_GET['query'])) {
-    $query = $_GET['query'];
-    $sql = "SELECT * FROM jobs WHERE title LIKE :query OR category LIKE :query OR location LIKE :query";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['query' => '%' . $query . '%']);
-    $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-// Handle the resume upload
+// Handle resume upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
     $resume = $_FILES['resume'];
-
-    // Check for errors
-    if ($resume['error'] == 0) {
-        // Check file type (only PDF allowed)
-        $allowed_types = ['application/pdf'];
-        if (in_array($resume['type'], $allowed_types)) {
-            $upload_dir = 'uploads/resumes/';
-            if (!is_dir($upload_dir)) {
-                mkdir($upload_dir, 0777, true); // Create the directory if it doesn't exist
-            }
-
-            $resume_name = uniqid() . '-' . basename($resume['name']);
-            $upload_path = $upload_dir . $resume_name;
-
-            // Move the uploaded file to the target directory
-            if (move_uploaded_file($resume['tmp_name'], $upload_path)) {
-                // Update the resume URL in the database
-                $user_id = $_SESSION['user_id'];
-                $stmt = $pdo->prepare("UPDATE users SET resume = :resume WHERE id = :id");
-                $stmt->execute([
-                    'resume' => $upload_path,
-                    'id' => $user_id
-                ]);
-
-                $upload_success = "Resume uploaded successfully!";
-            } else {
-                $upload_error = "Failed to upload the resume.";
-            }
+    if ($resume['error'] == 0 && $resume['type'] === 'application/pdf') {
+        $upload_dir = 'uploads/resumes/';
+        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+        $resume_name = uniqid() . '-' . basename($resume['name']);
+        $upload_path = $upload_dir . $resume_name;
+        if (move_uploaded_file($resume['tmp_name'], $upload_path)) {
+            $stmt = $pdo->prepare("UPDATE users SET resume = :resume WHERE id = :id");
+            $stmt->execute([
+                'resume' => $upload_path,
+                'id' => $_SESSION['user_id']
+            ]);
+            $upload_success = "Resume uploaded successfully!";
         } else {
-            $upload_error = "Only PDF files are allowed.";
+            $upload_error = "Failed to upload the resume.";
         }
     } else {
-        $upload_error = "There was an error uploading your resume.";
+        $upload_error = "Only PDF files are allowed.";
     }
 }
 ?>
@@ -62,80 +39,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['resume'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Job Seeker Dashboard - JobFinder</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>JobSeeker Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f4f6f9;
+      font-family: 'Poppins', sans-serif;
+    }
+    .card, .table {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 0 15px rgba(0,0,0,0.05);
+    }
+  </style>
 </head>
 <body>
+<div class="container py-5">
 
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Welcome, <strong>JobSeeker</strong></h2>
+    <a href="index.php" class="btn btn-outline-dark">Logout</a>
+  </div>
 
-<div class="container mt-5">
-    <h2 class="text-center">Welcome to Your Dashboard</h2>
-    <div class="row">
-        <!-- Search Jobs Section -->
-        <div class="col-md-4">
-            <h4>Search Jobs</h4>
-            <form action="" method="GET">
-                <input type="text" class="form-control" placeholder="Search jobs" name="query" value="<?= isset($_GET['query']) ? htmlspecialchars($_GET['query']) : '' ?>">
-                <button type="submit" class="btn btn-dark mt-2 w-100">Search</button>
-            </form>
+  <!-- Resume Upload -->
+  <div class="mb-4">
+    <h4>Upload Your Resume</h4>
+    <?php if (isset($upload_success)) echo "<div class='alert alert-success'>$upload_success</div>"; ?>
+    <?php if (isset($upload_error)) echo "<div class='alert alert-danger'>$upload_error</div>"; ?>
+    <form method="POST" enctype="multipart/form-data" class="d-flex gap-3">
+      <input type="file" name="resume" class="form-control" required accept=".pdf">
+      <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+  </div>
 
-            <!-- Display Search Results -->
-            <?php if (isset($_GET['query'])): ?>
-                <h5 class="mt-3">Search Results for "<?= htmlspecialchars($_GET['query']) ?>"</h5>
-                <?php if (count($jobs) > 0): ?>
-                    <ul class="list-group mt-2">
-                        <?php foreach ($jobs as $job): ?>
-                            <li class="list-group-item">
-                                <strong><?= htmlspecialchars($job['title']) ?></strong>
-                                <p class="mb-0"><?= substr(htmlspecialchars($job['description']), 0, 100) ?>...</p>
-                                <a href="job_details.php?id=<?= $job['id'] ?>" class="btn btn-link">View Details</a>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php else: ?>
-                    <p>No jobs found.</p>
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
-
-        <!-- Applications Section -->
-        <div class="col-md-4">
-            <h4>Your Applications</h4>
-            <!-- Sample placeholder applications -->
-            <ul class="list-group">
-                <li class="list-group-item">Job Title 1</li>
-                <li class="list-group-item">Job Title 2</li>
-            </ul>
-        </div>
-
-        <!-- Upload Resume Section -->
-        <div class="col-md-4">
-            <h4>Upload Resume</h4>
-
-            <!-- Display success or error message -->
-            <?php if (isset($upload_success)): ?>
-                <div class="alert alert-success">
-                    <?= $upload_success ?>
-                </div>
-            <?php elseif (isset($upload_error)): ?>
-                <div class="alert alert-danger">
-                    <?= $upload_error ?>
-                </div>
-            <?php endif; ?>
-
-            <form action="" method="POST" enctype="multipart/form-data">
-                <input type="file" class="form-control" name="resume" required>
-                <button type="submit" class="btn btn-success mt-2 w-100">Upload</button>
-            </form>
-        </div>
+  <!-- Job Listings -->
+  <div class="mt-4">
+    <h4 class="text-primary">Latest Job Openings</h4>
+    <div class="table-responsive">
+      <table class="table table-bordered mt-3">
+        <thead class="table-light">
+          <tr>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Location</th>
+            <th>Salary Range</th>
+            <th>Posted</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($jobs as $job): ?>
+          <tr>
+            <td><?= htmlspecialchars($job['title']) ?></td>
+            <td><?= htmlspecialchars($job['category']) ?></td>
+            <td><?= htmlspecialchars($job['location']) ?></td>
+            <td><?= htmlspecialchars($job['salary_range']) ?></td>
+            <td><?= htmlspecialchars($job['created_at']) ?></td>
+            <td><a href="job_details.php?id=<?= $job['id'] ?>" class="btn btn-sm btn-outline-primary">View</a></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
     </div>
-</div>
+  </div>
 
-<!-- Logout Button -->
-<div class="text-center mt-4">
-    <a href="index.php" class="btn btn-danger w-100">Logout</a>
 </div>
-
 </body>
 </html>
