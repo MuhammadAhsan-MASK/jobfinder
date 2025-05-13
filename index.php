@@ -86,34 +86,6 @@ include('db.php'); // Include the database connection
     </div>
 </section>
 
-<!-- Search Section -->
-<section class="search-section bg-light text-center">
-    <div class="container">
-        <h2>Find Your Dream Job</h2>
-        <form action="/search" method="GET" class="d-flex justify-content-center mt-4">
-            <input type="text" class="form-control form-control-lg w-50 rounded-start" placeholder="Search jobs by title or keyword" name="query">
-            <button type="submit" class="btn btn-dark btn-lg rounded-end">Search</button>
-        </form>
-    </div>
-</section>
-
-<!-- User Selection Section -->
-<section class="user-section bg-light text-center">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6">
-                <h4 class="text-center">Job Seekers</h4>
-                <a href="jobseeker_login.php" class="btn btn-primary w-100">Login</a>
-                <p class="text-center">Don't have an account? <a href="signup.php">Sign Up</a></p>
-            </div>
-            <div class="col-md-6">
-                <h4 class="text-center">Employers</h4>
-                <a href="employer_login.php" class="btn btn-secondary w-100">Login</a>
-                <p class="text-center">Don't have an account? <a href="signup.php">Sign Up</a></p>
-            </div>
-        </div>
-    </div>
-</section>
 
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
