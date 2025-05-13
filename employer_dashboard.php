@@ -12,6 +12,17 @@ $employer_id = $_SESSION['employer_id'];
 $stmt = $pdo->prepare("SELECT * FROM jobs WHERE employer_id = ?");
 $stmt->execute([$employer_id]);
 $jobs = $stmt->fetchAll();
+
+// Fetch applications for employer's jobs
+$stmt = $pdo->prepare("
+    SELECT a.id AS application_id, j.title AS job_title, a.applicant_name, a.status 
+    FROM applications a
+    JOIN jobs j ON a.job_id = j.id
+    WHERE j.employer_id = :employer_id
+");
+$stmt->execute(['employer_id' => $employer_id]);
+$applications = $stmt->fetchAll();
+
 ?>
 
 <!DOCTYPE html>
@@ -131,41 +142,31 @@ $jobs = $stmt->fetchAll();
         </div>
 
         <!-- View Applications Tab -->
-        <div class="tab-pane fade" id="view-applications" role="tabpanel" aria-labelledby="view-applications-tab">
-            <h4>Applications for Your Jobs</h4>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th scope="col">Job Title</th>
-                        <th scope="col">Applicant Name</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Example application listings -->
-                    <tr>
-                        <td>React Native Developer</td>
-                        <td>Talha Arshad</td>
-                        <td>Pending</td>
-                        <td>
-                            <button class="btn btn-success btn-sm">Shortlist</button>
-                            <button class="btn btn-danger btn-sm">Reject</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Marketing</td>
-                        <td>Ali Nahar</td>
-                        <td>Interviewing</td>
-                        <td>
-                            <button class="btn btn-success btn-sm">Shortlist</button>
-                            <button class="btn btn-danger btn-sm">Reject</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+        <tbody>
+<?php if ($applications): ?>
+    <?php foreach ($applications as $app): ?>
+        <tr>
+            <td><?= htmlspecialchars($app['job_title']) ?></td>
+            <td><?= htmlspecialchars($app['applicant_name']) ?></td>
+            <td><?= htmlspecialchars($app['status']) ?></td>
+            <td>
+                <form method="POST" action="update_application_status.php" class="d-inline">
+                    <input type="hidden" name="application_id" value="<?= $app['application_id'] ?>">
+                    <input type="hidden" name="new_status" value="Shortlisted">
+                    <button class="btn btn-success btn-sm" type="submit">Shortlist</button>
+                </form>
+                <form method="POST" action="update_application_status.php" class="d-inline">
+                    <input type="hidden" name="application_id" value="<?= $app['application_id'] ?>">
+                    <input type="hidden" name="new_status" value="Rejected">
+                    <button class="btn btn-danger btn-sm" type="submit">Reject</button>
+                </form>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+<?php else: ?>
+    <tr><td colspan="4">No applications found.</td></tr>
+<?php endif; ?>
+</tbody>
 
     <!-- Logout Button -->
     <form action="index.php" method="POST">
