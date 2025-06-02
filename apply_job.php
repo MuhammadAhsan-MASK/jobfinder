@@ -106,7 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php elseif ($error_message): ?>
         <div class="alert alert-danger"><?= $error_message ?></div>
     <?php endif; ?>
-
     <!-- Back Button -->
     <a href="jobseeker_dashboard.php" class="btn btn-secondary mb-3">Back to Job Listings</a>
 
